@@ -46,11 +46,35 @@ func DbgPrint(v ...interface{}) {
 	if !debugLibrary {
 		return
 	}
+	for i := 1; i < len(v); i++ {
+		if val, ok := v[i].(fmt.Stringer); ok {
+			v[i] = val.String()
+		}
+	}
 	out := fmt.Sprintf(v[0].(string), v[1:]...)
 	if len(out) > maxCharsPerLine {
 		out = out[:maxCharsPerLine]
 	}
 	fmt.Println(globalIndent + out)
+}
+
+// StringerWrapper implements Stringer interface for lazy evaluation
+type StringerWrapper struct {
+	fn    func(value interface{}) string
+	value interface{}
+}
+
+// String returns evaluated value
+func (s StringerWrapper) String() string {
+	return s.fn(s.value)
+}
+
+// NewStringer calls fn(value) in String() method for postponed evaluation
+func NewStringer(fn func(value interface{}) string, value interface{}) *StringerWrapper {
+	return &StringerWrapper{
+		fn:    fn,
+		value: value,
+	}
 }
 
 // DbgSchema prints v if the package global variable debugSchema is set.
